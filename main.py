@@ -44,17 +44,20 @@ def df_exploration(df):
 
 def data_exploration():
     cats = pd.read_csv( 'data/cookie_cats.csv')
-    print(cats.head(20))
-
+    # print(cats.head(20))
     return cats
 
-def ANOVA_test(df):
-    #version_com = df.groupby(['version']).count()
-    gate_30 = df[df['version'] == 'gate_30'].sum_gamerounds
-    gate_40 = df[df['version'] == 'gate_40'].sum_gamerounds
-    st.levene(gate_30, gate_40)
+def levene_test(df, col, features):
+    """
+        The Levene test tests the null hypothesis that all input samples are from populations with equal variances.
+        Levene’s test is an alternative to Bartlett’s test bartlett in the case where there are significant deviations from normality.
 
-    return gate_30,gate_40
+    """
+    group_A = df[df[col] == features[0]].sum_gamerounds
+    group_B = df[df[col] == features[1]].sum_gamerounds
+    result = st.levene(group_A, group_B)
+
+    return result
 
 def hist_plot(df):
     df_version = df.groupby(['version','retention_1'])['sum_gamerounds'].mean().reset_index()
