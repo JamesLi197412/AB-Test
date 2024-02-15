@@ -6,6 +6,7 @@ import scipy.stats as st
 import seaborn as sns
 import numpy as np
 import matplotlib
+from scipy.stats import mannwhitneyu
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
@@ -59,36 +60,111 @@ def levene_test(df, col, features):
 
     return result
 
-def hist_plot(df):
-    df_version = df.groupby(['version','retention_1'])['sum_gamerounds'].mean().reset_index()
-    # sns.factorplot(data=df_version,kind='count',x='retention_1',col='version')
+# Plot 1
+# Insights: Almost 50% to 50% in total by Groups
+def version_pie_portion(dataframe, col,target):
+    plt.figure(figsize=(10,5), dpi = 100)
+    target_df = dataframe.groupby([col])[target].agg(['count']).reset_index()
 
-    #df_version.plot(kind = 'bar')
-    ##plt.title('Gamerdouns ')
-    #plt.xticks( rotation = 0)
-    #plt.show()
+    plt.pie(target_df['count'],labels = target_df[col],
+            autopct='%1.2f%%', startangle=45, colors=sns.color_palette('Set1'),
+            labeldistance=0.55, pctdistance=0.2)
+    plt.title('Version Portion in Total', fontsize = 20)
+    plt.axis('off')
+    plt.legend()
+    plt.show()
+
+
+def box_plot(df,target = 'retention_1'):
+    #version_df = df.groupby(['version',target])['sum_gamerounds'].agg(['sum','median']).reset_index()
+    sns.catplot(df, x = 'version', y = 'sum_gamerounds', hue = target, kind = 'box')
+    plt.show()
+    #fig, axs = plt.subplots(1,2, figsize = (15,10))
+    #print(version_df.head())
 
 
 def distribution_plt(dataframe,column_name,title,xlabel,ylabel):
     # Distribution of Game Rounds by User ID
-    sns.distplot(dataframe[column_name], color = 'red')
+    sns.histplot(dataframe[column_name], color = 'red')
     plt.title(title, fontsize = 30)
     plt.xlabel(xlabel, fontsize = 15)
     plt.ylabel(ylabel)
     plt.axvline(np.median(dataframe[column_name]), 0, linestyle='--', linewidth=1.5, color='b')
     plt.show()
 
-def gamerounds_user(df):
+# Plot 2
+# Insights: Left Skewed Diagram
+def user_rounds(df):
     gamerounds_userid = df.groupby(['sum_gamerounds'])['userid'].count().reset_index()
-    #gamerounds_userid.columns = ['rounds', ''
-    return gamerounds_userid
+    gamerounds_userid.columns = ['Rounds', '# of User']
+    distribution_plt(gamerounds_userid, 'Rounds','# of User by Game Rounds', 'Rounds','# of User')
+    #print(gamerounds_userid.head())
+    # return gamerounds_userid
+
+
+def AB_test(df, target = 'retention_1'):
+    sub_df = df[['userid','version','sum_gamerounds',target]].copy(deep = True)
+    # 1. Establish the Hypothesis:
+    #*  H0 :  Gate_30 == Gate _40
+    #*  H1 :  Gate_30 != Gate_40
+    # H0 : There is no statistcal difference between gate_30 && gate_40
+
+    # 2. Hypothesis Implementation
+    # i) If the distribution is normal & variance are homogeneous, T-test are applied
+    # ii) If the distribution is normal & variances are not homogeneous, Welch Test are to be used.
+    # iii) If the distribution is not normal & variances are not homogeneous, Mann Whitney U
+    # Test directly (non-parametric test) are to be used.
+
+    # Via Previous Visualisation and Insights, the data set is not normally distributed.
+    # Thus, Mann Whitney U Test directly used.
+    pvalue = mannwhitneyu(sub_df.loc[sub_df['version'] == 'gate_30', 'sum_gamerounds'],
+                          sub_df.loc[sub_df['version'] == 'gate_40', 'sum_gamerounds'])
+    #print(type(pvalue))
+    #print(pvalue)
+
+    # 3. Interpret the result
+    if (pvalue[1] < 0.05):
+        print('Mann Whitney U Test Result \n')
+        print("H0 Hypothesis is Rejected. That is, there is a statistically signficiant difference between them")
+    else:
+        print('Mann Whitney U Test Result \n')
+        print("H0 Hypothesis is Not Rejected. That is, there is no statistically signficiant difference between them")
+
+    # Method 2
+    version_df = df.groupby('version')['retention_1'].agg(['median']).reset_index()
+    print(version_df.head())
+    # It comes up with mean difference between two version
+
+    # Am I confident in such difference -- bootstrapping : re-sample the dataset with replacement and
+    # calculate target column retention for those samples. The variation in target column will give us
+    # an indication of how uncertain the retention numbers are
+    bootstrapping = []
+    for i in range(1000):
+        boot_mean = df.sample(frac = 1, replace = True).groupby('version')['retention_1'].mean()
+        bootstrapping.append(boot_mean)
+
+    variation = pd.DataFrame(bootstrapping)
+    variation['diff'] = (variation['gate_30'] - variation['gate_40']) / variation['gate_40'] * 100
+
+    # Generate the density plot to show distribution of difference between two groups
+    variation['diff'].plot(kind = 'density')
+    plt.show()
+    plt.savefig('output/Density plot.png')
+
+    print(f'Probability that {target} retention is higher when (gate 30) is :',
+          (variation['diff'] > 0).mean())
+
+    # print(variation.head(20))
+    return variation,version_df,pvalue
 
 
 if __name__ == '__main__':
     cats = data_exploration()
+    print('Basic Information about Data Set')
+    print('-' * 100)
     df_exploration(cats)
-    #gate_30, gate_40 = ANOVA_test(cats)
-    # distribution_plt(cats, 'sum_gamerounds', title = 'Distribution of Game Rounds', xlabel = '', ylabel='')
-    #$ hist_plot(cats)
-    temp = gamerounds_user(cats)
-    print(temp)
+    print('-' * 100)
+    #version_pie_portion(cats, 'version','userid')
+    #user_rounds(cats)
+    # box_plot(cats)
+    variation,version_df,pvalue = AB_test(cats)
