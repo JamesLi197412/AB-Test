@@ -131,7 +131,7 @@ def AB_test(df, target = 'retention_1'):
         print("H0 Hypothesis is Not Rejected. That is, there is no statistically signficiant difference between them")
 
     # Method 2
-    version_df = df.groupby('version')['retention_1'].agg(['median']).reset_index()
+    version_df = df.groupby('version')['retention_1'].agg(['mean']).reset_index()
     print(version_df.head())
     # It comes up with mean difference between two version
 

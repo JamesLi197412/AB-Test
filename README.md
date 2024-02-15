@@ -26,9 +26,11 @@ In the dataset,
     If the result is lower than threshold (p-value), then H0 hypothesis will be rejected, in other word, there is a statistically signficiant difference between them.
 Else, there is no statistical difference between them.
 
-### Conclusion
+<img alt="Test Result"  src="output/Test Result.png" />
 
-<img alt="Test Result" height="400" src="output/Test Result.png.png" width="350"/>
+### Conclusion
+Becuase there is no significant difference, thus, there is no need to move from gate_30 to gate_40 by AB Test.
+
 
 ## Versioning
 
