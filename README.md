@@ -30,16 +30,3 @@ Else, there is no statistical difference between them.
 
 ### Conclusion
 Becuase there is no significant difference, thus, there is no need to move from gate_30 to gate_40 by AB Test.
-
-
-## Versioning
-
-Github/Git are used for versioning/sharing. 
-
-## Authors
-
-* **James Li** 
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
